@@ -149,9 +149,7 @@ def python_to_golang_sync(func_name, other_set = {}):
             res = requests.post('http://localhost:' + db_data + '/', data = other_set)
             data = res.text
 
-            if "database is locked" == data:
-                pass
-            elif "error" == data:
+            if "error" == data:
                 raise
             else:
                 return data
@@ -174,9 +172,7 @@ async def python_to_golang(func_name, other_set = {}):
                 async with session.post('http://localhost:' + db_data + '/', data = other_set) as res:
                     data = await res.text()
 
-                    if "database is locked" == data:
-                        pass
-                    elif "error" == data:
+                    if "error" == data:
                         raise
                     else:
                         return data
@@ -1243,7 +1239,7 @@ def skin_check(conn, set_n = 0):
         return skin
     
 def cache_v():
-    return '.cache_v283'
+    return '.cache_v284'
 
 def wiki_css(data):
     with class_temp_db() as m_conn:
@@ -1585,6 +1581,7 @@ def render_set(conn, doc_name = '', doc_data = '', data_type = 'view', markup = 
 
                 .opennamu_render_complete td {
                     padding: 5px 10px !important;
+                    word-break: break-all;
                 }
 
                 .opennamu_render_complete summary {
