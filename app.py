@@ -24,9 +24,6 @@ with open('version.json', encoding = 'utf8') as file_data:
 data_db_set = class_check_json()
 do_db_set(data_db_set)
 
-with class_temp_db() as m_conn:
-    m_conn.execute('pragma journal_mode = WAL')
-
 with get_db_connect(init_mode = True) as conn:
     curs = conn.cursor()
 
@@ -46,24 +43,25 @@ with get_db_connect(init_mode = True) as conn:
         else:
             setup_tool = 'init'
 
-    if setup_tool != 'normal' and run_mode != 'dev':
+    if run_mode != 'dev':
         file_name = linux_exe_chmod()
         local_file_path = os.path.join("route_go", "bin", file_name)
 
-        if os.path.exists(local_file_path):
-            print('Remove Old Binary')
-            os.remove(local_file_path)
+        if not (setup_tool == "normal" and os.path.exists(local_file_path)):
+            if os.path.exists(local_file_path):
+                print('Remove Old Binary')
+                os.remove(local_file_path)
 
-        download_url = version_list["bin_link"] + file_name
+            download_url = version_list["bin_link"] + file_name
 
-        print('Download New Binary File')
-        response = requests.get(download_url, stream = True)
-        if response.status_code == 200:
-            with open(local_file_path, 'wb') as file:
-                for chunk in response.iter_content(chunk_size = 8192):
-                    file.write(chunk)
+            print('Download New Binary File')
+            response = requests.get(download_url, stream = True)
+            if response.status_code == 200:
+                with open(local_file_path, 'wb') as file:
+                    for chunk in response.iter_content(chunk_size = 8192):
+                        file.write(chunk)
 
-            print('Complete Download')
+                print('Complete Download')
 
     if data_db_set['type'] == 'mysql':
         try:
@@ -148,7 +146,13 @@ with get_db_connect(init_mode = True) as conn:
             pass
 
         if setup_tool == 'update':
-            update(conn, int(ver_set_data[0][0]), data_db_set)
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(update(conn, int(ver_set_data[0][0]), data_db_set))
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(update(conn, int(ver_set_data[0][0]), data_db_set))
         else:
             set_init(conn)
 
@@ -231,11 +235,8 @@ with get_db_connect(init_mode = True) as conn:
 
         server_set[i] = server_set_val
         
-with class_temp_db() as m_conn:
-    m_curs = m_conn.cursor()
-        
-    for for_a in server_set:
-        m_curs.execute('insert into temp (name, data) values (?, ?)', ['setup_' + for_a, server_set[for_a]])
+for for_a in server_set:
+    global_some_set_do('setup_' + for_a, server_set[for_a])
 
 ###
 
@@ -252,29 +253,42 @@ else:
     else:
         cmd = [os.path.join(".", "route_go", "bin", "main.arm64.exe")]
         
+cmd += [server_set["golang_port"]]
 if run_mode != '':
     cmd += [run_mode]
 
-def golang_process_check():
-    with class_temp_db() as m_conn:
-        m_curs = m_conn.cursor()
-        
-        m_curs.execute('select data from temp where name = "setup_golang_port"')
-        db_data = m_curs.fetchall()
-        db_data = db_data[0][0] if db_data else "3001"
-        
-        while True:
-            try:
-                response = requests.post('http://localhost:' + db_data + '/', data = "test {}")
-                if response.status_code == 200:
-                    print('Golang turn on')
-                    break
-            except requests.ConnectionError:
-                print('Wait golang...')
-                time.sleep(1)
+async def golang_process_check():
+    while True:
+        try:
+            other_set_temp = {}
+            for k in data_db_set:
+                other_set_temp["db_" + k] = data_db_set[k]
+
+            other_set = {
+                "url" : "test",
+                "data" : json.dumps(other_set_temp),
+                "session" : "{}",
+                "cookie" : "",
+                "ip" : "127.0.0.1"
+            }
+
+            response = requests.post('http://localhost:' + server_set["golang_port"] + '/', data = json.dumps(other_set))
+            if response.status_code == 200:
+                print('Golang turn on')
+                break
+        except requests.ConnectionError:
+            print('Wait golang...')
+            time.sleep(1)
 
 golang_process = subprocess.Popen(cmd)
-golang_process_check()
+
+try:
+    loop = asyncio.get_running_loop()
+    loop.create_task(golang_process_check())
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(golang_process_check())
 
 ###
 
@@ -335,7 +349,7 @@ def back_up(data_db_set):
 
         threading.Timer(60 * 60 * back_time, back_up, [data_db_set]).start()
 
-def do_every_day():
+async def do_every_day():
     with get_db_connect() as conn:
         curs = conn.cursor()
         
@@ -399,14 +413,14 @@ def do_every_day():
         curs.execute(db_change('select data from other where name = "sitemap_auto_make"'))
         db_data = curs.fetchall()
         if db_data and db_data[0][0] != '':
-            main_setting_sitemap(1)
+            await main_setting_sitemap(1)
 
             print('Make sitemap')
 
         # 칭호 관리
         curs.execute(db_change("select id from user_set where name = 'user_title' and data = '✅'"))
         for for_a in curs.fetchall():
-            if acl_check('', 'all_admin_auth', '', for_a[0]) == 1:
+            if await acl_check('', 'all_admin_auth', '', for_a[0]) == 1:
                 curs.execute(db_change("update user_set set data = '☑️' where name = 'user_title' and data = '✅' and id = ?"), [for_a[0]])
 
         threading.Timer(60 * 60 * 24, do_every_day).start()
@@ -415,7 +429,13 @@ def auto_do_something(data_db_set):
     if data_db_set['type'] == 'sqlite':
         back_up(data_db_set)
 
-    do_every_day()
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(do_every_day())
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(do_every_day())
 
 auto_do_something(data_db_set)
 
@@ -423,29 +443,25 @@ print('Now running... http://localhost:' + server_set['port'])
 
 @app.before_request
 def before_request_func():
-    with class_temp_db() as m_conn:
-        m_curs = m_conn.cursor()
-        
-        m_curs.execute('select data from temp where name = "wiki_access_password"')
-        db_data = m_curs.fetchall()
-        if db_data:
-            access_password = db_data[0][0]
-            input_password = flask.request.cookies.get('opennamu_wiki_access', ' ')
-            if url_pas(access_password) != input_password:
-                with get_db_connect() as conn:
-                    return '''
-                        <script>
-                            "use strict";
-                            function opennamu_do_wiki_access() {
-                                let password = document.getElementById('wiki_access').value;
-                                document.cookie = 'opennamu_wiki_access=' + encodeURIComponent(password) + '; path=/;';
-                                history.go(0);
-                            }
-                        </script>
-                        <h2>''' + get_lang(conn, 'error_password_require_for_wiki_access') + '''</h2>
-                        <input type="password" id="wiki_access">
-                        <input type="submit" onclick="opennamu_do_wiki_access();">
-                    '''
+    db_data = global_some_set_do('wiki_access_password')
+    if db_data:
+        access_password = db_data
+        input_password = flask.request.cookies.get('opennamu_wiki_access', ' ')
+        if url_pas(access_password) != input_password:
+            with get_db_connect() as conn:
+                return '''
+                    <script>
+                        "use strict";
+                        function opennamu_do_wiki_access() {
+                            let password = document.getElementById('wiki_access').value;
+                            document.cookie = 'opennamu_wiki_access=' + encodeURIComponent(password) + '; path=/;';
+                            history.go(0);
+                        }
+                    </script>
+                    <h2>''' + get_lang(conn, 'error_password_require_for_wiki_access') + '''</h2>
+                    <input type="password" id="wiki_access">
+                    <input type="submit" onclick="opennamu_do_wiki_access();">
+                '''
 
 # Init-custom
 if os.path.exists('custom.py'):
@@ -799,8 +815,8 @@ app.route('/api/xref_this/<int:page>/<everything:name>', defaults = { 'xref_type
 app.route('/api/random')(api_w_random)
 
 app.route('/api/bbs/w/<sub_code>')(api_bbs_w)
-app.route('/api/bbs/w/comment/<sub_code>')(api_bbs_w_comment)
-app.route('/api/bbs/w/comment_one/<sub_code>')(api_bbs_w_comment_one)
+app.route('/api/bbs/w/comment/<sub_code>')(api_bbs_w_comment_exter)
+app.route('/api/bbs/w/comment_one/<sub_code>')(api_bbs_w_comment_one_exter)
 
 app.route('/api/version', defaults = { 'version_list' : version_list })(api_version)
 app.route('/api/skin_info')(api_skin_info)
@@ -811,10 +827,10 @@ app.route('/api/thread/<int:topic_num>/<int:s_num>/<int:e_num>')(api_topic)
 app.route('/api/thread/<int:topic_num>/<tool>')(api_topic)
 app.route('/api/thread/<int:topic_num>')(api_topic)
 
-app.route('/api/search/<everything:name>')(api_func_search)
-app.route('/api/search_page/<int:num>/<everything:name>')(api_func_search)
-app.route('/api/search_data/<everything:name>', defaults = { 'search_type' : 'data' })(api_func_search)
-app.route('/api/search_data_page/<int:num>/<everything:name>', defaults = { 'search_type' : 'data' })(api_func_search)
+app.route('/api/search/<everything:name>')(api_func_search_exter)
+app.route('/api/search_page/<int:num>/<everything:name>')(api_func_search_exter)
+app.route('/api/search_data/<everything:name>', defaults = { 'search_type' : 'data' })(api_func_search_exter)
+app.route('/api/search_data_page/<int:num>/<everything:name>', defaults = { 'search_type' : 'data' })(api_func_search_exter)
 
 app.route('/api/recent_change')(api_list_recent_change)
 app.route('/api/recent_changes')(api_list_recent_change)
@@ -859,8 +875,8 @@ app.route('/api/v2/bbs/set/<int:bbs_num>/<name>', methods = ['GET', 'PUT'])(api_
 app.route('/api/v2/bbs/in/<int:bbs_num>/<int:page>')(api_bbs)
 app.route('/api/v2/bbs/w/<sub_code>', defaults = { 'legacy' : '' })(api_bbs_w)
 app.route('/api/v2/bbs/w/tabom/<sub_code>', methods = ['GET', 'POST'])(api_bbs_w_tabom)
-app.route('/api/v2/bbs/w/comment/<sub_code>/<tool>', defaults = { 'legacy' : '' })(api_bbs_w_comment)
-app.route('/api/v2/bbs/w/comment_one/<sub_code>/<tool>', defaults = { 'legacy' : '' })(api_bbs_w_comment_one)
+app.route('/api/v2/bbs/w/comment/<sub_code>/<tool>', defaults = { 'legacy' : '' })(api_bbs_w_comment_exter)
+app.route('/api/v2/bbs/w/comment_one/<sub_code>/<tool>', defaults = { 'legacy' : '' })(api_bbs_w_comment_one_exter)
 
 app.route('/api/v2/doc_star_doc/<int:num>/<everything:name>', defaults = { 'do_type' : 'star_doc' })(api_w_watch_list)
 app.route('/api/v2/doc_watch_list/<int:num>/<everything:name>')(api_w_watch_list)
@@ -914,6 +930,7 @@ app.route('/setting/sitemap', methods = ['POST', 'GET'])(main_setting_sitemap)
 app.route('/setting/sitemap_set', methods = ['POST', 'GET'])(main_setting_sitemap_set)
 app.route('/setting/skin_set', methods = ['POST', 'GET'])(main_setting_skin_set)
 app.route('/setting/404_page', methods = ['POST', 'GET'])(setting_404_page)
+app.route('/setting/email_test', methods = ['POST', 'GET'])(main_setting_email_test)
 
 app.route('/easter_egg')(main_func_easter_egg)
 
