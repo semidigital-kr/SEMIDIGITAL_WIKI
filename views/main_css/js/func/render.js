@@ -1,83 +1,5 @@
 "use strict";
 
-// https://css-tricks.com/how-to-animate-the-details-element/
-class Accordion {
-    constructor(el) {
-        this.el = el;
-        this.summary = el.querySelector('summary');
-        this.content = el.querySelector('.opennamu_folding');
-    
-        this.animation = null;
-        this.isClosing = false;
-        this.isExpanding = false;
-        this.summary.addEventListener('click', (e) => this.onClick(e));
-    }
-  
-    onClick(e) {
-        e.preventDefault();
-        this.el.style.overflow = 'hidden';
-        if(this.isClosing || !this.el.open) {
-            this.open();
-        } else if(this.isExpanding || this.el.open) {
-            this.shrink();
-        }
-    }
-  
-    shrink() {
-        this.isClosing = true;
-        
-        const startHeight = `${this.el.offsetHeight}px`;
-        const endHeight = `${this.summary.offsetHeight}px`;
-        
-        if(this.animation) {
-            this.animation.cancel();
-        }
-        
-        this.animation = this.el.animate({
-            height: [startHeight, endHeight]
-        }, {
-            duration: 200,
-            easing: 'ease-out'
-        });
-        
-        this.animation.onfinish = () => this.onAnimationFinish(false);
-        this.animation.oncancel = () => this.isClosing = false;
-    }
-  
-    open() {
-        this.el.style.height = `${this.el.offsetHeight}px`;
-        this.el.open = true;
-        window.requestAnimationFrame(() => this.expand());
-    }
-  
-    expand() {
-        this.isExpanding = true;
-        const startHeight = `${this.el.offsetHeight}px`;
-        const endHeight = `${this.summary.offsetHeight + this.content.offsetHeight}px`;
-        
-        if(this.animation) {
-            this.animation.cancel();
-        }
-        
-        this.animation = this.el.animate({
-            height: [startHeight, endHeight]
-        }, {
-            duration: 200,
-            easing: 'ease-out'
-        });
-        this.animation.onfinish = () => this.onAnimationFinish(true);
-        this.animation.oncancel = () => this.isExpanding = false;
-    }
-  
-    onAnimationFinish(open) {
-        this.el.open = open;
-        this.animation = null;
-        this.isClosing = false;
-        this.isExpanding = false;
-        this.el.style.height = this.el.style.overflow = '';
-    }
-}
-
 function opennamu_heading_folding(data, element = '') {
     let fol = document.getElementById(data);
     if(fol.style.display === '' || fol.style.display === 'inline-block' || fol.style.display === 'block') {
@@ -271,26 +193,6 @@ function opennamu_do_category_spread() {
             '<style>.opennamu_main .opennamu_category_button { display: none; } .opennamu_main .opennamu_category { white-space: pre-wrap; overflow-x: unset; text-overflow: unset; }</style>' +
         '' + document.getElementsByClassName('opennamu_render_complete')[0].innerHTML;
     }
-}
-
-function opennamu_do_include(name, render_name, to_obj, option_obj) {
-    let option = {};
-    if(option_obj !== '') {
-        if(document.getElementById(option_obj)) {
-            option = document.getElementById(option_obj).innerHTML;
-            option = decodeURIComponent(option);
-        }
-    }
-
-    fetch("/api/raw/" + opennamu_do_url_encode(name)).then(function(res) {
-        return res.json();
-    }).then(function(data) {
-        if(data["data"]) {
-            opennamu_do_render(to_obj, data["data"], render_name, 'include', option, function() {
-                document.getElementById(option_obj).style.display = "inline";
-            });
-        }
-    });
 }
 
 function opennamu_do_toc() {
