@@ -30,7 +30,7 @@ async def list_admin_auth_use(arg_num = 1, arg_search = 'normal'):
                     
                     if ip_view != '':
                         do_data = do_data.split(' ')
-                        do_data = do_data[0] if do_data[0] in ('ban') else data[1]
+                        do_data = do_data[0] if do_data[0] in ['ban'] else data[1]
 
                 list_data += '<li>' + await ip_pas(data[0]) + ' | ' + html.escape(do_data) + ' | ' + data[2] + '</li>'
 
@@ -40,7 +40,7 @@ async def list_admin_auth_use(arg_num = 1, arg_search = 'normal'):
             arg_search = html.escape(arg_search) if arg_search != 'normal' else ''
 
             return easy_minify(conn, flask.render_template(skin_check(conn),
-                imp = [get_lang(conn, 'authority_use_list'), wiki_set(conn), await wiki_custom(conn), wiki_css([0, 0])],
+                imp = [get_lang(conn, 'authority_use_list'), await wiki_set(), await wiki_custom(conn), wiki_css([0, 0])],
                 data = '''
                     <form method="post">
                         <input class="opennamu_width_200" name="search" placeholder="''' + get_lang(conn, 'start_with_search') + '''" value="''' + arg_search + '''">

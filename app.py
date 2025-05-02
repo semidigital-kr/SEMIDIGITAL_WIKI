@@ -17,7 +17,7 @@ run_mode = ''
 if len(args) > 1:
     run_mode = args[1]
 
-    if not run_mode in ('dev'):
+    if not run_mode in ['dev']:
         run_mode = ''
 
 # Init-Version
@@ -973,7 +973,10 @@ atexit.register(terminate_golang)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for = 1, x_proto = 1)
 
 if __name__ == "__main__":
-    config = Config()
-    config.bind = [server_set['host'] + ":" + server_set['port']]
+    if run_mode in ['dev']:
+        app.run(host = server_set['host'], port = int(server_set['port']), use_reloader = False)
+    else:
+        config = Config()
+        config.bind = [server_set['host'] + ":" + server_set['port']]
 
-    asyncio.run(serve(app, config))
+        asyncio.run(serve(app, config))
