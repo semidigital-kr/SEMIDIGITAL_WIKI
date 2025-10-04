@@ -1,23 +1,12 @@
 [(en-US)](./readme-en.md) | [(ko-KR)](./readme.md)
 
-# 오픈나무
+# SEMIDIGITAL WIKI
 [![Python 3.8 이상](https://img.shields.io/badge/python->=%203.8-blue.svg)](https://python.org)
 [![라이선스](https://img.shields.io/badge/license-BSD%203--Clause-lightgrey.svg)](./LICENSE)
 
 ![](https://raw.githubusercontent.com/openNAMU/openNAMU/beta/.github/logo.png)
 
-오픈나무는 파이썬 기반의 위키 엔진입니다.
-
-## 시작하기
-오픈나무는 파이썬 환경에서 동작하는 파이썬 애플리케이션으로, 파이썬 환경을 필요로 합니다.
-
-[여기](https://2du.pythonanywhere.com/w/설치법)를 눌러 설치 가이드를 볼 수 있습니다.
-
-### 클론
-아래 명령을 터미널(명령 프롬프트)에 입력하여 본 리포지토리를 클론할 수 있습니다.
- * 일반: `git clone -b stable https://github.com/openNAMU/openNAMU.git`
- * 베타: `git clone -b beta https://github.com/openNAMU/openNAMU.git`
- * 개발: `git clone -b dev https://github.com/openNAMU/openNAMU.git`
+SEMIDIGITAL WIKI는 파이썬 기반의 위키 엔진 openNAMU를 기반으로 한 개인 위키입니다.
 
 ## 기여
 오픈나무에는 확인되지 않은 버그가 존재할 수 있습니다. 이를 보고해주시면 오픈나무의 발전을 도울 수 있습니다. [여기](https://github.com/openNAMU/openNAMU/issues/new)를 눌러 버그를 보고해주세요.
