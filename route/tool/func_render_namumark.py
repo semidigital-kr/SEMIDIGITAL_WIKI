@@ -909,6 +909,7 @@ class class_do_render_namumark:
             link_data = re.search(link_regex, self.render_data)
             if not link_data:
                 break
+            
             elif link_count_all < 0:
                 print('Error : render link count overflow')
                 break
@@ -1196,7 +1197,9 @@ class class_do_render_namumark:
                         self.render_data = re.sub(link_regex, lambda x : ('<' + data_name + '>' + link_sub + '</' + data_name + '>' + add_str), self.render_data, 1)
                     else:
                         self.render_data = re.sub(link_regex, link_data[2], self.render_data, 1)
+                
                 # out link
+                #SEMIDIGITAL 코드 수정 부분
                 elif re.search(r'^https?:\/\/', link_main, flags = re.I):
                     link_main = self.get_tool_data_restore(link_main, do_type = 'slash')
                     link_title = link_main
@@ -1220,33 +1223,63 @@ class class_do_render_namumark:
                     except:
                         pass
 
-                    link_inter_icon = ''
-                    link_class = 'opennamu_link_out'
+                    # 최소 패치: namu.wiki만 내부 링크처럼 처리
+                    if domain == "namu.wiki" or domain == "soundcloud.com" or domain == "wiki.semidigital.co.kr" or domain == "instagram.com" or domain == "daol.cc":
+                        link_class = "opennamu_link"   # 내부 링크 스타일
+                        add_str = link_data[2] if link_data[2] else ''
 
-                    self.curs.execute(db_change("select html, plus_t from html_filter where kind = 'outer_link' and plus = ?"), [domain])
-                    db_data = self.curs.fetchall()
-                    if db_data:
-                        if db_data[0][1] != '':
-                            if re.search(r'<|>', db_data[0][1]):
-                                link_inter_icon = db_data[0][1]
-                                link_class = 'opennamu_link_inter'
-                            else:
-                                if self.get_tool_data_restore(link_sub).find('"' + db_data[0][1] + '"') != -1:
-                                    link_inter_icon = ''
+                        data_name = self.get_tool_data_storage(
+                            f'<a class="{link_class}" title="{link_title}" href="{link_main}">',
+                            '</a>',
+                            link_data_full
+                        )
+                        self.render_data = re.sub(
+                            link_regex,
+                            lambda x: f'<{data_name}>{link_sub or link_main}</{data_name}>{add_str}',
+                            self.render_data,
+                            1
+                        )
+
+                    else:
+                        # 원래 외부 링크 처리 코드
+                        link_inter_icon = ''
+                        link_class = 'opennamu_link_out'
+
+                        self.curs.execute(db_change(
+                            "select html, plus_t from html_filter where kind = 'outer_link' and plus = ?"
+                        ), [domain])
+                        db_data = self.curs.fetchall()
+                        if db_data:
+                            if db_data[0][1] != '':
+                                if re.search(r'<|>', db_data[0][1]):
+                                    link_inter_icon = db_data[0][1]
                                     link_class = 'opennamu_link_inter'
                                 else:
-                                    link_inter_icon = '<img src="' + db_data[0][1] + '">'
-                                    link_class = 'opennamu_link_inter'
-                        else:
-                            link_inter_icon = db_data[0][0] + ':'
-                            link_class = 'opennamu_link_inter'
+                                    if self.get_tool_data_restore(link_sub).find('"' + db_data[0][1] + '"') != -1:
+                                        link_inter_icon = ''
+                                        link_class = 'opennamu_link_inter'
+                                    else:
+                                        link_inter_icon = '<img src="' + db_data[0][1] + '">'
+                                        link_class = 'opennamu_link_inter'
+                            else:
+                                link_inter_icon = db_data[0][0] + ':'
+                                link_class = 'opennamu_link_inter'
 
-                    add_str = ''
-                    if link_data[2]:
-                        add_str = link_data[2]
+                        add_str = ''
+                        if link_data[2]:
+                            add_str = link_data[2]
 
-                    data_name = self.get_tool_data_storage('<a class="' + link_class + '" target="_blank" title="' + link_title + '" href="' + link_main + '">' + link_inter_icon + link_sub_storage, '</a>', link_data_full)
-                    self.render_data = re.sub(link_regex, lambda x : ('<' + data_name + '>' + link_sub + '</' + data_name + '>' + add_str), self.render_data, 1)
+                        data_name = self.get_tool_data_storage(
+                            '<a class="' + link_class + '" target="_blank" title="' + link_title + '" href="' + link_main + '">' + link_inter_icon + link_sub_storage,
+                            '</a>',
+                            link_data_full
+                        )
+                        self.render_data = re.sub(
+                            link_regex,
+                            lambda x : ('<' + data_name + '>' + link_sub + '</' + data_name + '>' + add_str),
+                            self.render_data,
+                            1
+                        )
                 # in link
                 else:
                     # under page & fix url
