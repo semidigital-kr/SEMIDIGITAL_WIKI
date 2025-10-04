@@ -4,7 +4,7 @@
 [![Python 3.8 이상](https://img.shields.io/badge/python->=%203.8-blue.svg)](https://python.org)
 [![라이선스](https://img.shields.io/badge/license-BSD%203--Clause-lightgrey.svg)](./LICENSE)
 
-![](https://raw.githubusercontent.com/openNAMU/openNAMU/beta/.github/logo.png)
+![](/data/images/7f1a8cf5808147eb4caf186bd007fe375d7c9ce6b18890bcbc3ddb44.png)
 
 SEMIDIGITAL WIKI는 파이썬 기반의 위키 엔진인 openNAMU 기반의 개인 위키입니다.
 
